@@ -1,4 +1,4 @@
-const CACHE_NAME = 'smoke-log-v1';
+const CACHE_NAME = 'smoke-log-v2';
 const ASSETS = [
   './',
   './index.html',
