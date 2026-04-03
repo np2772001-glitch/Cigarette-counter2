@@ -1,32 +1,17 @@
 {
-  "name": "Smoke Log",
-  "short_name": "Smoke Log",
-  "description": "A daily cigarette counter app",
-  "start_url": "./index.html",
-  "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#0f0d0b",
-  "theme_color": "#e8a020",
-  "lang": "en",
-  "scope": "./",
+  "short_name": "SmokeLog",
+  "name": "Smoke Log Tracker",
   "icons": [
     {
-      "src": "./icon-192.png",
-      "sizes": "192x192",
+      "src": "https://cdn-icons-png.flaticon.com/512/2489/2489756.png",
       "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "./icon-512.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "./icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     }
-  ]
+  ],
+  "start_url": "./index.html",
+  "background_color": "#0f0d0b",
+  "display": "standalone",
+  "scope": "./",
+  "theme_color": "#e8a020"
 }
