@@ -10,42 +10,42 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root { --bg: #0f0d0b; --amber: #e8a020; --amber-dim: #7a5210; --smoke: #b0a898; --ash: #4a4540; --red: #c94040; }
   html, body { background: var(--bg); color: var(--smoke); font-family: 'Courier New', Courier, monospace; min-height: 100vh; }
-  .app { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 40px 24px; gap: 30px; }
+  .app { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 30px 24px; gap: 20px; }
   .header { text-align: center; }
   .title { font-size: 13px; font-weight: bold; letter-spacing: 0.35em; color: var(--amber-dim); text-transform: uppercase; }
-  .date-title { font-size: 11px; color: var(--ash); margin-top: 6px; }
-  .count { font-family: 'Arial Black', sans-serif; font-size: 90px; line-height: 1; color: var(--amber); text-shadow: 0 0 40px rgba(232,160,32,0.2); }
   
-  /* 10-COLUMN GRID */
-  .cig-row { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; width: 100%; max-width: 220px; }
+  /* RESTORED TIMER STYLE */
+  .timer { font-size: 11px; color: var(--ash); margin-top: 8px; text-transform: uppercase; letter-spacing: 0.1em; }
+  
+  .count { font-family: 'Arial Black', sans-serif; font-size: 80px; line-height: 1; color: var(--amber); margin: 10px 0; }
+  
+  .cig-row { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; width: 100%; max-width: 220px; margin-bottom: 10px; }
   .cig-icon { width: 100%; height: 6px; border-radius: 1px; background: linear-gradient(to right, #c8a060 70%, var(--red) 70%); }
 
-  .controls { display: flex; flex-direction: column; align-items: center; gap: 25px; }
-  .btn-row { display: flex; align-items: center; gap: 30px; }
+  .btn-row { display: flex; align-items: center; gap: 30px; margin: 10px 0; }
   .add-btn { width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--amber); background: transparent; color: var(--amber); font-size: 36px; cursor: pointer; }
-  .sub-btn { width: 56px; height: 56px; border-radius: 50%; border: 2px solid var(--ash); background: transparent; color: var(--ash); font-size: 28px; cursor: pointer; }
+  .sub-btn { width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--ash); background: transparent; color: var(--ash); font-size: 24px; cursor: pointer; }
   
-  /* HISTORY SECTION */
-  .history-container { width: 100%; max-width: 280px; margin-top: 20px; border-top: 1px solid var(--ash); padding-top: 20px; }
-  .history-header { font-size: 10px; letter-spacing: 0.2em; color: var(--ash); text-transform: uppercase; margin-bottom: 12px; text-align: center; }
-  .history-list { display: flex; flex-direction: column; gap: 8px; }
-  .history-item { display: flex; justify-content: space-between; font-size: 12px; color: var(--smoke); border-bottom: 1px hideen var(--ash); padding-bottom: 4px; }
+  .history-container { width: 100%; max-width: 260px; margin-top: 15px; border-top: 1px solid var(--ash); padding-top: 15px; }
+  .history-header { font-size: 10px; letter-spacing: 0.2em; color: var(--ash); text-transform: uppercase; margin-bottom: 10px; text-align: center; }
+  .history-item { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px solid rgba(74,69,64,0.3); }
   .history-date { color: var(--ash); }
   .history-val { font-weight: bold; color: var(--amber-dim); }
 </style>
 </head>
 <body>
 <div class="app">
-  <div class="header"><div class="title">Smoke Log</div><div id="dateDisplay" class="date-title"></div></div>
+  <div class="header">
+    <div class="title">Smoke Log</div>
+    <div id="timerDisplay" class="timer">Time Since: --:--:--</div>
+  </div>
   
   <div class="count" id="countDisplay">0</div>
   <div id="cigRow" class="cig-row"></div>
 
-  <div class="controls">
-    <div class="btn-row">
-      <button class="sub-btn" onclick="updateCount(-1)">−</button>
-      <button class="add-btn" onclick="updateCount(1)">+</button>
-    </div>
+  <div class="btn-row">
+    <button class="sub-btn" onclick="updateCount(-1)">−</button>
+    <button class="add-btn" onclick="updateCount(1)">+</button>
   </div>
 
   <div class="history-container">
@@ -55,8 +55,8 @@
 </div>
 
 <script>
-  // Data structure: { "2026-04-03": 21, "2026-04-02": 18 }
   let logData = JSON.parse(localStorage.getItem('smokeLogData') || '{}');
+  let lastTime = localStorage.getItem('lastSmokeTime') || null;
   
   function getToday() { return new Date().toISOString().slice(0, 10); }
 
@@ -64,6 +64,12 @@
     const today = getToday();
     logData[today] = (logData[today] || 0) + val;
     if (logData[today] < 0) logData[today] = 0;
+    
+    if (val > 0) {
+      lastTime = Date.now();
+      localStorage.setItem('lastSmokeTime', lastTime);
+    }
+    
     saveAndRender();
   }
 
@@ -72,15 +78,20 @@
     render();
   }
 
+  function updateTimer() {
+    if (!lastTime) return;
+    const diff = Math.floor((Date.now() - lastTime) / 1000);
+    const h = Math.floor(diff / 3600).toString().padStart(2, '0');
+    const m = Math.floor((diff % 3600) / 60).toString().padStart(2, '0');
+    const s = (diff % 60).toString().padStart(2, '0');
+    document.getElementById('timerDisplay').textContent = `Time Since: ${h}:${m}:${s}`;
+  }
+
   function render() {
     const today = getToday();
     const count = logData[today] || 0;
-    
-    // Update main display
     document.getElementById('countDisplay').textContent = count;
-    document.getElementById('dateDisplay').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
-    // Update Grid
     const row = document.getElementById('cigRow');
     row.innerHTML = '';
     for(let i=0; i < count; i++) {
@@ -89,33 +100,22 @@
       row.appendChild(d);
     }
 
-    // Update History List
     const historyList = document.getElementById('historyList');
     historyList.innerHTML = '';
-    
-    // Sort dates descending (newest first), excluding today
     const sortedDates = Object.keys(logData).sort().reverse();
     
     sortedDates.forEach(date => {
       const item = document.createElement('div');
       item.className = 'history-item';
-      
       const displayDate = date === today ? "Today" : date;
-      
-      item.innerHTML = `
-        <span class="history-date">${displayDate}</span>
-        <span class="history-val">${logData[date]}</span>
-      `;
+      item.innerHTML = `<span class="history-date">${displayDate}</span><span class="history-val">${logData[date]}</span>`;
       historyList.appendChild(item);
     });
   }
 
-  // Register Service Worker for PWA
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js');
-  }
-
+  setInterval(updateTimer, 1000);
   render();
+  updateTimer();
 </script>
 </body>
 </html>
