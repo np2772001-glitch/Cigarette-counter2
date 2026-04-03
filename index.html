@@ -5,152 +5,117 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Smoke Log</title>
 <meta name="theme-color" content="#e8a020">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Smoke Log">
 <link rel="manifest" href="manifest.json">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root { --bg: #0f0d0b; --amber: #e8a020; --amber-dim: #7a5210; --smoke: #b0a898; --ash: #4a4540; --red: #c94040; }
-  html, body { height: 100%; background: var(--bg); color: var(--smoke); font-family: 'Courier New', Courier, monospace; overflow: hidden; -webkit-font-smoothing: antialiased; }
-  body::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E"); opacity: 0.04; pointer-events: none; z-index: 100; }
-  .app { height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 40px 20px 48px; }
+  html, body { background: var(--bg); color: var(--smoke); font-family: 'Courier New', Courier, monospace; min-height: 100vh; }
+  .app { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 40px 24px; gap: 30px; }
   .header { text-align: center; }
   .title { font-size: 13px; font-weight: bold; letter-spacing: 0.35em; color: var(--amber-dim); text-transform: uppercase; }
-  .date { font-size: 11px; letter-spacing: 0.12em; color: var(--ash); margin-top: 6px; }
-  .counter-area { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; }
-  .count-label { font-size: 11px; letter-spacing: 0.3em; color: var(--ash); text-transform: uppercase; }
-  .count { font-family: 'Arial Black', sans-serif; font-size: clamp(80px, 20vw, 120px); line-height: 1; color: var(--amber); text-shadow: 0 0 60px rgba(232,160,32,0.3); user-select: none; }
-  .count.bump { animation: bump 0.18s ease; }
-  @keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.08); } 100% { transform: scale(1); } }
+  .date-title { font-size: 11px; color: var(--ash); margin-top: 6px; }
+  .count { font-family: 'Arial Black', sans-serif; font-size: 90px; line-height: 1; color: var(--amber); text-shadow: 0 0 40px rgba(232,160,32,0.2); }
   
-  /* Updated Grid for 10 per row */
-  .cig-row { 
-    display: grid; 
-    grid-template-columns: repeat(10, 1fr); 
-    gap: 6px; 
-    max-width: 280px; 
-    min-height: 24px; 
-    margin: 0 auto;
-    max-height: 150px;
-    overflow-y: auto;
-    padding: 4px;
-  }
-  .cig-icon { width: 20px; height: 7px; border-radius: 2px; background: linear-gradient(to right, #c8a060 70%, var(--red) 70%); opacity: 0; transform: scale(0.5); transition: opacity 0.2s, transform 0.2s; }
-  .cig-icon.show { opacity: 1; transform: scale(1); }
+  /* 10-COLUMN GRID */
+  .cig-row { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; width: 100%; max-width: 220px; }
+  .cig-icon { width: 100%; height: 6px; border-radius: 1px; background: linear-gradient(to right, #c8a060 70%, var(--red) 70%); }
+
+  .controls { display: flex; flex-direction: column; align-items: center; gap: 25px; }
+  .btn-row { display: flex; align-items: center; gap: 30px; }
+  .add-btn { width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--amber); background: transparent; color: var(--amber); font-size: 36px; cursor: pointer; }
+  .sub-btn { width: 56px; height: 56px; border-radius: 50%; border: 2px solid var(--ash); background: transparent; color: var(--ash); font-size: 28px; cursor: pointer; }
   
-  .last-info { text-align: center; min-height: 56px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-  .last-label { font-size: 10px; letter-spacing: 0.25em; color: var(--ash); text-transform: uppercase; }
-  .last-time { font-size: 22px; letter-spacing: 0.08em; color: var(--smoke); }
-  .last-elapsed { font-size: 12px; color: var(--amber-dim); letter-spacing: 0.12em; }
-  .no-data { font-size: 12px; color: var(--ash); letter-spacing: 0.1em; }
-  .controls { display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%; }
-  .btn-row { display: flex; align-items: center; gap: 36px; }
-  .add-btn { width: 88px; height: 88px; border-radius: 50%; border: 2px solid var(--amber); background: transparent; color: var(--amber); font-size: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.15s; -webkit-tap-highlight-color: transparent; }
-  .add-btn:active { transform: scale(0.93); background: rgba(232,160,32,0.08); }
-  .sub-btn { width: 64px; height: 64px; border-radius: 50%; border: 2px solid var(--ash); background: transparent; color: var(--ash); font-size: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.15s; -webkit-tap-highlight-color: transparent; }
-  .sub-btn:active { transform: scale(0.93); border-color: var(--red); color: var(--red); }
-  .reset-btn { background: none; border: none; color: var(--ash); font-size: 10px; letter-spacing: 0.25em; text-transform: uppercase; cursor: pointer; padding: 8px 16px; }
+  /* HISTORY SECTION */
+  .history-container { width: 100%; max-width: 280px; margin-top: 20px; border-top: 1px solid var(--ash); padding-top: 20px; }
+  .history-header { font-size: 10px; letter-spacing: 0.2em; color: var(--ash); text-transform: uppercase; margin-bottom: 12px; text-align: center; }
+  .history-list { display: flex; flex-direction: column; gap: 8px; }
+  .history-item { display: flex; justify-content: space-between; font-size: 12px; color: var(--smoke); border-bottom: 1px hideen var(--ash); padding-bottom: 4px; }
+  .history-date { color: var(--ash); }
+  .history-val { font-weight: bold; color: var(--amber-dim); }
 </style>
 </head>
 <body>
 <div class="app">
-  <div class="header">
-    <div class="title">Smoke Log</div>
-    <div class="date" id="dateDisplay"></div>
-  </div>
-  <div class="counter-area">
-    <div class="count-label">today</div>
-    <div class="count" id="countDisplay">0</div>
-    <div class="cig-row" id="cigRow"></div>
-  </div>
-  <div class="last-info" id="lastInfo">
-    <div class="no-data">no cigarettes yet</div>
-  </div>
+  <div class="header"><div class="title">Smoke Log</div><div id="dateDisplay" class="date-title"></div></div>
+  
+  <div class="count" id="countDisplay">0</div>
+  <div id="cigRow" class="cig-row"></div>
+
   <div class="controls">
     <div class="btn-row">
-      <button class="sub-btn" onclick="removeCigarette()">−</button>
-      <button class="add-btn" onclick="addCigarette()">+</button>
+      <button class="sub-btn" onclick="updateCount(-1)">−</button>
+      <button class="add-btn" onclick="updateCount(1)">+</button>
     </div>
-    <button class="reset-btn" onclick="resetDay()">reset day</button>
+  </div>
+
+  <div class="history-container">
+    <div class="history-header">Daily History</div>
+    <div id="historyList" class="history-list"></div>
   </div>
 </div>
+
 <script>
-  let state = load();
-  let deferredPrompt;
+  // Data structure: { "2026-04-03": 21, "2026-04-02": 18 }
+  let logData = JSON.parse(localStorage.getItem('smokeLogData') || '{}');
+  
+  function getToday() { return new Date().toISOString().slice(0, 10); }
 
-  function load() { try { const s = JSON.parse(localStorage.getItem('smokeLog')||'{}'); const t = todayKey(); if(s.date!==t) return {date:t,count:0,lastTime:null}; return s; } catch { return {date:todayKey(),count:0,lastTime:null}; } }
-  function save() { localStorage.setItem('smokeLog', JSON.stringify(state)); }
-  function todayKey() { return new Date().toISOString().slice(0,10); }
-
-  function addCigarette() { 
-    state.count++; 
-    state.lastTime=Date.now(); 
-    save(); 
-    render(); 
-    const el=document.getElementById('countDisplay'); 
-    el.classList.remove('bump'); 
-    void el.offsetWidth; 
-    el.classList.add('bump'); 
+  function updateCount(val) {
+    const today = getToday();
+    logData[today] = (logData[today] || 0) + val;
+    if (logData[today] < 0) logData[today] = 0;
+    saveAndRender();
   }
 
-  function removeCigarette() { if(state.count<=0) return; state.count--; if(state.count===0) state.lastTime=null; save(); render(); }
-  function resetDay() { if(state.count===0) return; if(!confirm('Reset today\'s count?')) return; state.count=0; state.lastTime=null; save(); render(); }
+  function saveAndRender() {
+    localStorage.setItem('smokeLogData', JSON.stringify(logData));
+    render();
+  }
 
   function render() {
-    document.getElementById('dateDisplay').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
-    document.getElementById('countDisplay').textContent = state.count;
-    const row=document.getElementById('cigRow'); 
-    const shown=Math.min(state.count, 100); // Increased limit to 100 icons
+    const today = getToday();
+    const count = logData[today] || 0;
     
-    while(row.children.length<shown){
-      const d=document.createElement('div');
-      d.className='cig-icon';
+    // Update main display
+    document.getElementById('countDisplay').textContent = count;
+    document.getElementById('dateDisplay').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+    // Update Grid
+    const row = document.getElementById('cigRow');
+    row.innerHTML = '';
+    for(let i=0; i < count; i++) {
+      const d = document.createElement('div');
+      d.className = 'cig-icon';
       row.appendChild(d);
-      requestAnimationFrame(()=>requestAnimationFrame(()=>d.classList.add('show')));
     }
-    while(row.children.length>shown) row.removeChild(row.lastChild);
+
+    // Update History List
+    const historyList = document.getElementById('historyList');
+    historyList.innerHTML = '';
     
-    const info=document.getElementById('lastInfo');
-    if(!state.lastTime){info.innerHTML='<div class="no-data">no cigarettes yet</div>';}
-    else {
-      const t=new Date(state.lastTime);
-      const ts=t.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
-      info.innerHTML=`<div class="last-label">last cigarette</div><div class="last-time">${ts}</div><div class="last-elapsed" id="elapsedEl">${elapsedStr(Date.now()-state.lastTime)} ago</div>`;
-    }
-  }
-
-  function elapsedStr(ms){
-    const s=Math.floor(ms/1000); if(s<60)return s+'s';
-    const m=Math.floor(s/60); if(m<60)return m+'m';
-    const h=Math.floor(m/60); const rm=m%60; return rm>0?h+'h '+rm+'m':h+'h';
-  }
-
-  setInterval(()=>{
-    if(state.lastTime){
-      const el=document.getElementById('elapsedEl');
-      if(el)el.textContent=elapsedStr(Date.now()-state.lastTime)+' ago';
-    }
-    if(state.date!==todayKey()){state={date:todayKey(),count:0,lastTime:null};save();render();}
-  },30000);
-
-  // App Install Prompt Logic
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    // The browser will now show the install banner when the user interacts with the page
-    setTimeout(() => {
-        if (deferredPrompt) deferredPrompt.prompt();
-    }, 3000);
-  });
-
-  render();
-
-  if('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW registration failed:', err));
+    // Sort dates descending (newest first), excluding today
+    const sortedDates = Object.keys(logData).sort().reverse();
+    
+    sortedDates.forEach(date => {
+      const item = document.createElement('div');
+      item.className = 'history-item';
+      
+      const displayDate = date === today ? "Today" : date;
+      
+      item.innerHTML = `
+        <span class="history-date">${displayDate}</span>
+        <span class="history-val">${logData[date]}</span>
+      `;
+      historyList.appendChild(item);
     });
   }
+
+  // Register Service Worker for PWA
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js');
+  }
+
+  render();
 </script>
 </body>
 </html>
