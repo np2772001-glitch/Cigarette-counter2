@@ -8,29 +8,25 @@
 <link rel="manifest" href="manifest.json">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root { --bg: #0f0d0b; --amber: #e8a020; --amber-dim: #7a5210; --smoke: #b0a898; --ash: #4a4540; --red: #c94040; }
+  :root { --bg: #0f0d0b; --amber: #e8a020; --amber-dim: #7a5210; --smoke: #b0a898; --ash: #a09a90; --red: #c94040; }
   html, body { background: var(--bg); color: var(--smoke); font-family: 'Courier New', Courier, monospace; min-height: 100vh; }
   .app { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 30px 24px; gap: 20px; }
   .header { text-align: center; }
   .title { font-size: 13px; font-weight: bold; letter-spacing: 0.35em; color: var(--amber-dim); text-transform: uppercase; }
-  
-  /* RESTORED TIMER STYLE */
-  .timer { font-size: 11px; color: var(--ash); margin-top: 8px; text-transform: uppercase; letter-spacing: 0.1em; }
-  
+  .timer { font-size: 11px; color: var(--ash); margin-top: 8px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: bold; }
   .count { font-family: 'Arial Black', sans-serif; font-size: 80px; line-height: 1; color: var(--amber); margin: 10px 0; }
-  
   .cig-row { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; width: 100%; max-width: 220px; margin-bottom: 10px; }
   .cig-icon { width: 100%; height: 6px; border-radius: 1px; background: linear-gradient(to right, #c8a060 70%, var(--red) 70%); }
-
   .btn-row { display: flex; align-items: center; gap: 30px; margin: 10px 0; }
   .add-btn { width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--amber); background: transparent; color: var(--amber); font-size: 36px; cursor: pointer; }
   .sub-btn { width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--ash); background: transparent; color: var(--ash); font-size: 24px; cursor: pointer; }
-  
   .history-container { width: 100%; max-width: 260px; margin-top: 15px; border-top: 1px solid var(--ash); padding-top: 15px; }
-  .history-header { font-size: 10px; letter-spacing: 0.2em; color: var(--ash); text-transform: uppercase; margin-bottom: 10px; text-align: center; }
-  .history-item { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px solid rgba(74,69,64,0.3); }
+  .history-header { font-size: 11px; letter-spacing: 0.2em; color: var(--ash); text-transform: uppercase; margin-bottom: 10px; text-align: center; font-weight: bold; }
+  .history-item { display: flex; justify-content: space-between; font-size: 13px; padding: 6px 0; border-bottom: 1px solid rgba(160, 154, 144, 0.2); }
   .history-date { color: var(--ash); }
-  .history-val { font-weight: bold; color: var(--amber-dim); }
+  .history-val { font-weight: bold; color: var(--amber); }
+  .data-btns { display: flex; justify-content: center; gap: 15px; margin-top: 20px; }
+  .data-link { font-size: 10px; color: var(--ash); text-decoration: none; border: 1px solid var(--ash); padding: 5px 10px; border-radius: 3px; cursor: pointer; text-transform: uppercase; }
 </style>
 </head>
 <body>
@@ -39,83 +35,22 @@
     <div class="title">Smoke Log</div>
     <div id="timerDisplay" class="timer">Time Since: --:--:--</div>
   </div>
-  
   <div class="count" id="countDisplay">0</div>
   <div id="cigRow" class="cig-row"></div>
-
   <div class="btn-row">
     <button class="sub-btn" onclick="updateCount(-1)">−</button>
     <button class="add-btn" onclick="updateCount(1)">+</button>
   </div>
-
   <div class="history-container">
     <div class="history-header">Daily History</div>
     <div id="historyList" class="history-list"></div>
+    <div class="data-btns">
+        <label class="data-link">Import <input type="file" id="importFile" style="display:none" onchange="importData(this)"></label>
+        <span class="data-link" onclick="exportData()">Export</span>
+    </div>
   </div>
 </div>
 
 <script>
   let logData = JSON.parse(localStorage.getItem('smokeLogData') || '{}');
-  let lastTime = localStorage.getItem('lastSmokeTime') || null;
-  
-  function getToday() { return new Date().toISOString().slice(0, 10); }
-
-  function updateCount(val) {
-    const today = getToday();
-    logData[today] = (logData[today] || 0) + val;
-    if (logData[today] < 0) logData[today] = 0;
-    
-    if (val > 0) {
-      lastTime = Date.now();
-      localStorage.setItem('lastSmokeTime', lastTime);
-    }
-    
-    saveAndRender();
-  }
-
-  function saveAndRender() {
-    localStorage.setItem('smokeLogData', JSON.stringify(logData));
-    render();
-  }
-
-  function updateTimer() {
-    if (!lastTime) return;
-    const diff = Math.floor((Date.now() - lastTime) / 1000);
-    const h = Math.floor(diff / 3600).toString().padStart(2, '0');
-    const m = Math.floor((diff % 3600) / 60).toString().padStart(2, '0');
-    const s = (diff % 60).toString().padStart(2, '0');
-    document.getElementById('timerDisplay').textContent = `Time Since: ${h}:${m}:${s}`;
-  }
-
-  function render() {
-    const today = getToday();
-    const count = logData[today] || 0;
-    document.getElementById('countDisplay').textContent = count;
-
-    const row = document.getElementById('cigRow');
-    row.innerHTML = '';
-    for(let i=0; i < count; i++) {
-      const d = document.createElement('div');
-      d.className = 'cig-icon';
-      row.appendChild(d);
-    }
-
-    const historyList = document.getElementById('historyList');
-    historyList.innerHTML = '';
-    const sortedDates = Object.keys(logData).sort().reverse();
-    
-    sortedDates.forEach(date => {
-      const item = document.createElement('div');
-      item.className = 'history-item';
-      const displayDate = date === today ? "Today" : date;
-      item.innerHTML = `<span class="history-date">${displayDate}</span><span class="history-val">${logData[date]}</span>`;
-      historyList.appendChild(item);
-    });
-  }
-
-  setInterval(updateTimer, 1000);
-  render();
-  updateTimer();
-</script>
-</body>
-</html>
+  let timeHistory =
