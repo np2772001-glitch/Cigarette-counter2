@@ -4,12 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Smoke Log</title>
-<meta name="theme-color" content="#e8a020">
-<link rel="manifest" href="manifest.json">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root { --bg: #0f0d0b; --amber: #e8a020; --amber-dim: #7a5210; --smoke: #b0a898; --ash: #a09a90; --red: #c94040; }
-  html, body { background: var(--bg); color: var(--smoke); font-family: 'Courier New', Courier, monospace; min-height: 100vh; }
+  body { background: var(--bg); color: var(--smoke); font-family: 'Courier New', Courier, monospace; min-height: 100vh; }
   .app { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 30px 24px; gap: 20px; }
   .header { text-align: center; }
   .title { font-size: 13px; font-weight: bold; letter-spacing: 0.35em; color: var(--amber-dim); text-transform: uppercase; }
@@ -43,14 +41,121 @@
   </div>
   <div class="history-container">
     <div class="history-header">Daily History</div>
-    <div id="historyList" class="history-list"></div>
+    <div id="historyList"></div>
     <div class="data-btns">
-        <label class="data-link">Import <input type="file" id="importFile" style="display:none" onchange="importData(this)"></label>
+        <label class="data-link">Import <input type="file" style="display:none" onchange="importData(this)"></label>
         <span class="data-link" onclick="exportData()">Export</span>
     </div>
   </div>
 </div>
 
 <script>
-  let logData = JSON.parse(localStorage.getItem('smokeLogData') || '{}');
-  let timeHistory =
+  // Initial data loading with safety checks
+  let logData = {};
+  let timeHistory = [];
+
+  try {
+    const savedLog = localStorage.getItem('smokeLogData');
+    const savedTime = localStorage.getItem('smokeTimeHistory');
+    if (savedLog) logData = JSON.parse(savedLog);
+    if (savedTime) timeHistory = JSON.parse(savedTime);
+  } catch (e) {
+    console.error("Storage error:", e);
+    logData = {};
+    timeHistory = [];
+  }
+
+  function getToday() { 
+    return new Date().toISOString().split('T')[0]; 
+  }
+
+  function updateCount(val) {
+    const today = getToday();
+    if (val > 0) {
+      logData[today] = (logData[today] || 0) + 1;
+      timeHistory.push(Date.now());
+    } else {
+      if ((logData[today] || 0) > 0) {
+        logData[today] -= 1;
+        timeHistory.pop();
+      }
+    }
+    saveAndRender();
+  }
+
+  function saveAndRender() {
+    localStorage.setItem('smokeLogData', JSON.stringify(logData));
+    localStorage.setItem('smokeTimeHistory', JSON.stringify(timeHistory));
+    render();
+  }
+
+  function render() {
+    const today = getToday();
+    const count = logData[today] || 0;
+    document.getElementById('countDisplay').textContent = count;
+    
+    const row = document.getElementById('cigRow');
+    row.innerHTML = '';
+    for(let i=0; i < count; i++) {
+      const d = document.createElement('div');
+      d.className = 'cig-icon';
+      row.appendChild(d);
+    }
+    
+    const historyList = document.getElementById('historyList');
+    historyList.innerHTML = '';
+    const sortedDates = Object.keys(logData).sort().reverse();
+    sortedDates.forEach(date => {
+      const item = document.createElement('div');
+      item.className = 'history-item';
+      const displayDate = (date === today) ? "Today" : date;
+      item.innerHTML = `<span class="history-date">${displayDate}</span><span class="history-val">${logData[date]}</span>`;
+      historyList.appendChild(item);
+    });
+  }
+
+  function updateTimer() {
+    if (timeHistory.length === 0) {
+      document.getElementById('timerDisplay').textContent = "Time Since: --:--:--";
+      return;
+    }
+    const lastTime = timeHistory[timeHistory.length - 1];
+    const diff = Math.floor((Date.now() - lastTime) / 1000);
+    const h = Math.floor(diff / 3600).toString().padStart(2, '0');
+    const m = Math.floor((diff % 3600) / 60).toString().padStart(2, '0');
+    const s = (diff % 60).toString().padStart(2, '0');
+    document.getElementById('timerDisplay').textContent = `Time Since: ${h}:${m}:${s}`;
+  }
+
+  function exportData() {
+    const dataStr = JSON.stringify({ logData, timeHistory });
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `smoke_backup_${getToday()}.json`;
+    a.click();
+  }
+
+  function importData(input) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const imported = JSON.parse(e.target.result);
+        if (confirm("Restore backup?")) {
+          logData = imported.logData || {};
+          timeHistory = imported.timeHistory || [];
+          saveAndRender();
+        }
+      } catch (err) { alert("Invalid file."); }
+    };
+    reader.readAsText(input.files[0]);
+  }
+
+  // Start logic
+  setInterval(updateTimer, 1000);
+  render();
+  updateTimer();
+</script>
+</body>
+</html>
